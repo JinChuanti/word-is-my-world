@@ -1,0 +1,36 @@
+[
+  {
+    "word": "abandon",
+    "definition": "v. 放弃，抛弃；n. 放纵，狂热",
+    "mnemonic_type": "association",
+    "mnemonic_content": "a（一个）+ band（乐队）+ on（在...上）→ 一个乐队在台上演出时突然放弃了，抛弃了观众。记住：放弃、抛弃。",
+    "example_sentence": "He had to abandon his car in the snow and walk home."
+  },
+  {
+    "word": "ability",
+    "definition": "n. 能力，才能",
+    "mnemonic_type": "root",
+    "mnemonic_content": "able（能够的）+ ity（名词后缀）→ 能够做某事的状态 → 能力。词根记忆：able表示能够，加上名词后缀ity。",
+    "example_sentence": "She has the ability to solve complex problems quickly."
+  },
+  {
+    "word": "absorb",
+    "definition": "v. 吸收，吸取；专心于",
+    "mnemonic_type": "phonetic",
+    "mnemonic_content": "谐音：爱不走吧 → 海绵爱不走吧，因为它要吸收水分。记住：吸收。",
+    "example_sentence": "Plants absorb nutrients from the soil through their roots."
+  },
+  {
+    "word": "academic",
+    "definition": "adj. 学术的，学院的；n. 学者",
+    "mnemonic_type": "root",
+    "mnemonic_content": "academ（学院）+ ic（形容词后缀）→ 学院的 → 学术的。来源于古希腊哲学家柏拉图创办的学院Academy。",
+    "example_sentence": "His academic performance has improved significantly this semester."
+  },
+  {
+    "word": "accept",
+    "definition": "v. 接受，承认，同意",
+    "mnemonic_type": "root",
+    "mnemonic_content": "ac（向，朝）+ cept（拿，取）→ 向着拿过来 → 接受。词根cept表示拿、取，如concept（概念）。",
+    "example_sentence": "I accept your apology and hope we can move forward."
+  }]
