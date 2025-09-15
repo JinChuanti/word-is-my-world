@@ -24,7 +24,7 @@
     <!-- 候选单词列表 -->
     <div v-if="showSuggestions && suggestions.length > 0" class="suggestions-list">
       <div 
-        v-for="(suggestion, index) in suggestions" 
+        v-for="suggestion in suggestions" 
         :key="suggestion.word"
         class="suggestion-item"
         @mousedown="selectSuggestion(suggestion.word)"
