@@ -30,8 +30,7 @@
             </span>
             趣味记忆法
           </h3>
-          <div class="mnemonic-content">
-            {{ searchResult.data!.mnemonic_content }}
+          <div class="mnemonic-content" v-html="parseMarkdown(searchResult.data!.mnemonic_content)">
           </div>
         </div>
         
@@ -68,6 +67,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { marked } from 'marked'
 import type { SearchResult } from '../types/word'
 import { useClipboard } from '../composables/useClipboard'
 
@@ -96,6 +96,17 @@ const getMnemonicTypeLabel = (type: string): string => {
     'compound': '组合'
   }
   return typeMap[type] || '其他'
+}
+
+// 解析Markdown内容
+const parseMarkdown = (content: string): string => {
+  try {
+    const result = marked(content, { breaks: true })
+    return typeof result === 'string' ? result : String(result)
+  } catch (error) {
+    console.error('Markdown解析错误:', error)
+    return content
+  }
 }
 
 // 复制单词
@@ -302,13 +313,13 @@ const copyWord = async () => {
 
 .no-result-text {
   font-size: 16px;
-  color: #6b7280;
+  color: #374151;
   margin: 0 0 8px 0;
 }
 
 .no-result-suggestion {
   font-size: 14px;
-  color: #9ca3af;
+  color: #4b5563;
   margin: 0;
 }
 
@@ -337,6 +348,7 @@ const copyWord = async () => {
   line-height: 1.6;
   max-width: 400px;
   margin: 0 auto;
+  color: #374151;
 }
 
 @media (max-width: 640px) {

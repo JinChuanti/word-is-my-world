@@ -7,6 +7,8 @@
         type="text"
         class="search-input"
         placeholder="输入要查询的单词..."
+        @focus="showSuggestions = true"
+        @blur="hideSuggestions"
       />
       <button
           v-if="searchQuery"
@@ -18,6 +20,20 @@
           ✕
         </button>
     </div>
+    
+    <!-- 候选单词列表 -->
+    <div v-if="showSuggestions && suggestions.length > 0" class="suggestions-list">
+      <div 
+        v-for="(suggestion, index) in suggestions" 
+        :key="suggestion.word"
+        class="suggestion-item"
+        @mousedown="selectSuggestion(suggestion.word)"
+      >
+        <span class="suggestion-word">{{ suggestion.word }}</span>
+        <span class="suggestion-definition">{{ suggestion.definition }}</span>
+      </div>
+    </div>
+    
     <div class="search-hint" v-if="!searchQuery">
       💡 提示：输入单词进行查询，或使用粘贴按钮快速输入
     </div>
@@ -25,10 +41,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import type { WordData } from '../types/word'
 
 interface Props {
   modelValue?: string
+  wordsData?: WordData[]
 }
 
 interface Emits {
@@ -38,7 +56,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: ''
+  modelValue: '',
+  wordsData: () => []
 })
 
 const emit = defineEmits<Emits>()
@@ -48,6 +67,21 @@ const searchQuery = ref(props.modelValue)
 
 // 输入框引用
 const inputRef = ref<HTMLInputElement>()
+
+// 候选单词显示状态
+const showSuggestions = ref(false)
+
+// 候选单词计算属性
+const suggestions = computed(() => {
+  if (!searchQuery.value || searchQuery.value.length < 2) {
+    return []
+  }
+  
+  const query = searchQuery.value.toLowerCase()
+  return props.wordsData
+    .filter(word => word.word.toLowerCase().startsWith(query))
+    .slice(0, 8) // 最多显示8个候选
+})
 
 // 监听外部值变化
 watch(() => props.modelValue, (newValue) => {
@@ -66,6 +100,19 @@ const clearSearch = () => {
   emit('clear')
 }
 
+// 选择候选单词
+const selectSuggestion = (word: string) => {
+  searchQuery.value = word
+  showSuggestions.value = false
+}
+
+// 隐藏候选列表（延迟执行以允许点击事件）
+const hideSuggestions = () => {
+  setTimeout(() => {
+    showSuggestions.value = false
+  }, 150)
+}
+
 // 聚焦输入框
 const focusInput = () => {
   inputRef.value?.focus()
@@ -79,6 +126,7 @@ defineExpose({
 
 <style scoped>
 .search-box {
+  position: relative;
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
@@ -141,13 +189,68 @@ defineExpose({
 .search-hint {
   margin-top: 8px;
   font-size: 14px;
-  color: #6b7280;
+  color: #374151;
   text-align: center;
+}
+
+/* 候选单词列表样式 */
+.suggestions-list {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.suggestion-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+}
+
+.suggestion-item:hover {
+  background-color: #f8fafc;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-word {
+  font-weight: 600;
+  color: #1f2937;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.suggestion-definition {
+  font-size: 12px;
+  color: #6b7280;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {
   .search-input {
     font-size: 16px; /* 防止iOS缩放 */
+  }
+  
+  .suggestions-list {
+    max-height: 200px;
+  }
+  
+  .suggestion-item {
+    padding: 10px 12px;
   }
 }
 </style>

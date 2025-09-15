@@ -18,6 +18,7 @@
         <section class="search-section">
           <SearchBox
             v-model="searchQuery"
+            :words-data="wordsData"
             @search="handleSearch"
             @clear="handleClear"
             ref="searchBoxRef"
@@ -63,7 +64,10 @@
     <footer class="app-footer">
       <div class="container">
         <p class="footer-text">
-          © 2024 考研单词趣记法查询工具 | 让学习更高效
+          © 2025 考研单词趣记法查询工具 | 让学习更高效
+        </p>
+        <p class="footer-author">
+          23计算机1金传体 作品
         </p>
       </div>
     </footer>
@@ -79,6 +83,7 @@ import { useWordSearch } from './composables/useWordSearch'
 
 // 使用单词搜索功能
 const {
+  wordsData,
   searchQuery,
   isLoading,
   error,
@@ -293,6 +298,14 @@ watch(searchQuery, (newQuery) => {
   color: rgba(255, 255, 255, 0.8);
   margin: 0;
   font-size: 14px;
+}
+
+.footer-author {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  font-style: italic;
 }
 
 /* 响应式设计 */
