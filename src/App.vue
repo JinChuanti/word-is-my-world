@@ -7,7 +7,7 @@
           <span class="title-icon">📚</span>
           考研单词趣记法查询工具
         </h1>
-        <p class="app-subtitle">让记单词变得更有趣</p>
+        <p class="app-subtitle">让记单词变得更有趣 · 覆盖26考研红宝书所有单词</p>
       </div>
     </header>
 

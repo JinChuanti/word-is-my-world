@@ -2,6 +2,14 @@
 
 一个轻量级、响应极速的纯前端Web应用，专为备战考研的中国大学生设计。提供谐音、联想、词根词缀等趣味记忆技巧的快速查询功能。
 
+**词库覆盖：26考研红宝书所有单词**
+
+## 在线体验
+
+🌐 **立即体验：** https://meek-kitten-70bdfb.netlify.app/
+
+推荐使用 Google Chrome 或 Microsoft Edge 浏览器访问以获得最佳体验。
+
 ## 功能特点
 
 - 🔍 实时搜索单词，瞬时响应
@@ -9,6 +17,7 @@
 - 🎯 精确匹配查找
 - 💡 趣味记忆法展示
 - 📱 响应式设计，支持平板设备
+- 📚 覆盖26考研红宝书所有单词
 
 ## 技术栈
 
@@ -61,9 +70,10 @@ src/
 ```json
 {
   "word": "abandon",
-  "definition": "v. 放弃, 抛弃",
-  "mnemonic_type": "词根词缀",
-  "mnemonic_content": "词根记忆法内容...",
-  "example_sentence": "例句及翻译"
+  "definition": "vt.放弃；抛弃；沉湎于 n.放任,放纵",
+  "mnemonic_type": "phonetic",
+  "mnemonic_content": "谐音拆解：a-ban-don ≈ 啊-搬-凳。\n联想故事：工头看着堆成山的旧凳子叹气："啊？还要搬这些凳？咱们放弃吧！"后来他不仅抛弃了完成任务的承诺，还沉湎于每天摸鱼，彻底陷入放任的状态。\n核心总结：听到"啊搬凳"，就关联放弃、抛弃的动作，再想到沉湎后的放纵状态。",
+  "example_sentence": "When he abandoned the tedious moving task (of carrying stools), he also abandoned his responsibility to his team and abandoned himself to lazy afternoons, living in such abandon that everyone was shocked.",
+  "sentence_translation": "当他放弃了搬凳子的繁琐任务时，也抛弃了对团队的责任，还沉湎于慵懒的午后时光，过得如此放纵，让所有人都大吃一惊。"
 }
 ```

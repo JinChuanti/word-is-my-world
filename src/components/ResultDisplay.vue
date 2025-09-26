@@ -38,6 +38,7 @@
         <div class="example-section" v-if="searchResult.data!.example_sentence">
           <h3 class="section-title">例句</h3>
           <p class="example-text">{{ searchResult.data!.example_sentence }}</p>
+          <p class="example-translation" v-if="searchResult.data!.sentence_translation">{{ searchResult.data!.sentence_translation }}</p>
         </div>
       </div>
     </div>
@@ -281,12 +282,23 @@ const copyWord = async () => {
   font-size: 15px;
   line-height: 1.6;
   color: #4b5563;
-  margin: 0;
+  margin: 0 0 8px 0;
   padding: 16px;
   background: #f1f5f9;
   border-radius: 8px;
   border-left: 4px solid #64748b;
   font-style: italic;
+}
+
+.example-translation {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6b7280;
+  margin: 0;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #94a3b8;
 }
 
 /* 未找到结果 */
