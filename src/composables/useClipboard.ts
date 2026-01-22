@@ -55,11 +55,39 @@ export function useClipboard() {
     }
   };
 
+  // 写入文本到剪贴板
+  const copyToClipboard = async (text: string): Promise<void> => {
+    try {
+      error.value = null
+      if (!isSupported.value) {
+        throw new Error('浏览器不支持剪贴板API')
+      }
+      await navigator.clipboard.writeText(text)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '写入剪贴板失败'
+      error.value = errorMessage
+      console.error('Failed to write to clipboard:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  // 传统的粘贴文本方法（为了兼容性保留）
+  const pasteFromClipboard = async (): Promise<string> => {
+    const result = await readClipboardItems();
+    if (result.type === 'text' && typeof result.data === 'string') {
+      return result.data;
+    }
+    return '';
+  }
+
+  // 初始化检查支持性
+  checkSupport()
+
   return {
     isSupported,
     error,
     pasteFromClipboard,
-    readClipboardItems, // 导出新方法
+    readClipboardItems,
     copyToClipboard,
     checkSupport
   }
