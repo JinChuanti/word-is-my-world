@@ -176,16 +176,17 @@ const handleGlobalPaste = async (event: ClipboardEvent) => {
       handlePasteError('图片识别失败');
     }
   } else if (!isInput) {
-    // 非输入框的文本粘贴
+    // 移除文本粘贴功能，仅保留图片 OCR 识别
+    /* 
     const text = event.clipboardData?.getData('text');
     if (text && text.trim()) {
        event.preventDefault();
-       // 简单验证
        const cleanText = text.trim();
        if (/[a-zA-Z]/.test(cleanText)) {
          handlePaste(cleanText);
        }
     }
+    */
   }
 }
 
@@ -304,13 +305,22 @@ watch(searchQuery, (newQuery) => {
 }
 
 .search-section {
+  position: sticky;
+  top: 20px;
+  z-index: 100;
   margin-bottom: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .paste-section {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 15px;
 }
 
 /* 加载状态 */

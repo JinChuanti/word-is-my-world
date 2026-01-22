@@ -35,7 +35,7 @@
     </div>
     
     <div class="search-hint" v-if="!searchQuery">
-      💡 提示：输入单词进行查询，或使用粘贴按钮快速输入
+      💡 提示：输入单词进行查询，或点击按钮识别截图中的单词
     </div>
   </div>
 </template>

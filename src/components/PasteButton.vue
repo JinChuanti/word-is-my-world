@@ -9,10 +9,10 @@
         'paste-button--disabled': !isSupported
       }"
       type="button"
-      title="支持粘贴文本或图片进行识别"
+      title="点击识别剪贴板中的截图单词"
     >
       <span class="paste-button__icon" v-if="!isLoading && !isRecognizing">
-        📋
+        📸
       </span>
       <span class="paste-button__loading" v-if="isLoading || isRecognizing">
         {{ isRecognizing ? '🔍' : '⏳' }}
@@ -63,12 +63,12 @@ const error = ref<string | null>(null)
 // 计算属性
 const buttonText = computed(() => {
   if (isRecognizing.value) return '识别中...'
-  if (isLoading.value) return '粘贴中...'
-  if (!isSupported.value) return '不支持粘贴'
-  return '粘贴/OCR识别'
+  if (isLoading.value) return '读取中...'
+  if (!isSupported.value) return '不支持识别'
+  return '截图识别查询'
 })
 
-// 处理粘贴事件
+// 处理点击事件（仅处理图片 OCR）
 const handlePaste = async () => {
   if (!isSupported.value || isLoading.value || isRecognizing.value) {
     return
@@ -80,18 +80,7 @@ const handlePaste = async () => {
     
     const result = await readClipboardItems()
     
-    if (result.type === 'text' && typeof result.data === 'string') {
-      const text = result.data
-      if (!text) throw new Error('剪贴板内容为空')
-      
-      const cleanText = text.trim()
-      // 简单验证是否包含字母
-      if (!/[a-zA-Z]/.test(cleanText)) {
-        throw new Error('请粘贴包含英文单词的内容')
-      }
-      emit('paste', cleanText)
-      
-    } else if (result.type === 'image' && result.data instanceof Blob) {
+    if (result.type === 'image' && result.data instanceof Blob) {
       // 图片处理
       isLoading.value = false // 切换到 OCR 状态
       const text = await recognizeImage(result.data)
@@ -102,8 +91,10 @@ const handlePaste = async () => {
       }
       emit('paste', word)
       
+    } else if (result.type === 'text') {
+      throw new Error('请截图单词后点击此按钮，暂不支持直接粘贴文本')
     } else {
-      throw new Error('剪贴板中没有文本或图片')
+      throw new Error('剪贴板中没有图片，请先使用 Win+Shift+S 截图')
     }
     
   } catch (err) {
