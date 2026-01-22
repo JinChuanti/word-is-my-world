@@ -60,7 +60,7 @@
       <div class="empty-state-icon">📚</div>
       <h3 class="empty-state-title">开始查询单词</h3>
       <p class="empty-state-text">
-        在上方输入框中输入英文单词，或点击按钮识别截图中的单词，即可查看趣味记忆法。
+        在上方输入框中输入英文单词，或点击按钮截取屏幕识别单词，即可查看趣味记忆法。
       </p>
     </div>
   </div>

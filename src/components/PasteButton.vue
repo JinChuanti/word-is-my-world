@@ -9,7 +9,7 @@
         'paste-button--disabled': !isSupported
       }"
       type="button"
-      title="点击识别剪贴板中的截图单词"
+      title="点击选择屏幕区域进行识别"
     >
       <span class="paste-button__icon" v-if="!isLoading && !isRecognizing">
         📸
@@ -40,74 +40,70 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useClipboard } from '../composables/useClipboard'
+import { computed, ref } from 'vue'
 import { useOCR } from '../composables/useOCR'
+// import { useClipboard } from '../composables/useClipboard' // 不再需要读取剪贴板
+import { useScreenCapture } from '../composables/useScreenCapture'
 
-// Emits
 interface Emits {
   (e: 'paste', text: string): void
-  (e: 'error', error: string): void
+  (e: 'error', message: string): void
 }
 
 const emit = defineEmits<Emits>()
 
-// 使用 composables
-const { isSupported, readClipboardItems } = useClipboard()
 const { recognizeImage, extractWord, isRecognizing, error: ocrError, progress } = useOCR()
+// const { readClipboardItems, isSupported, error: clipboardError } = useClipboard()
+const { captureScreen, isCapturing, captureError } = useScreenCapture()
 
-// 本地状态
-const isLoading = ref(false)
-const error = ref<string | null>(null)
+// Screen Capture support check
+const isSupported = ref(!!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia))
 
-// 计算属性
-const buttonText = computed(() => {
-  if (isRecognizing.value) return '识别中...'
-  if (isLoading.value) return '读取中...'
-  if (!isSupported.value) return '不支持识别'
-  return '截图识别查询'
+const isLoading = computed(() => isCapturing.value)
+const error = computed(() => {
+  // 优先显示 OCR 错误，其次是截图错误
+  const err = ocrError.value || captureError.value
+  return err ? err : null
 })
 
-// 处理点击事件（仅处理图片 OCR）
+// 按钮文本
+const buttonText = computed(() => {
+  if (isRecognizing.value) return '识别中...'
+  if (isCapturing.value) return '截屏中...'
+  return '截屏识别查询'
+})
+
+// 处理点击事件（屏幕截图 -> OCR）
 const handlePaste = async () => {
-  if (!isSupported.value || isLoading.value || isRecognizing.value) {
+  if (isLoading.value || isRecognizing.value) {
     return
   }
 
   try {
-    isLoading.value = true
-    error.value = null
+    // 1. 触发屏幕截图
+    const imageBlob = await captureScreen()
     
-    const result = await readClipboardItems()
-    
-    if (result.type === 'image' && result.data instanceof Blob) {
-      // 图片处理
-      isLoading.value = false // 切换到 OCR 状态
-      const text = await recognizeImage(result.data)
-      const word = extractWord(text)
-      
-      if (!word) {
-        throw new Error('未能从图片中识别出有效的英文单词')
+    // 如果返回 null，说明用户取消了或失败了
+    if (!imageBlob) {
+      if (captureError.value) {
+        throw new Error(captureError.value)
       }
-      emit('paste', word)
-      
-    } else if (result.type === 'text') {
-      throw new Error('请截图单词后点击此按钮，暂不支持直接粘贴文本')
-    } else {
-      throw new Error('剪贴板中没有图片，请先使用 Win+Shift+S 截图')
+      return // 用户取消，不做处理
     }
+
+    // 2. OCR 识别
+    const text = await recognizeImage(imageBlob)
+    const word = extractWord(text)
+    
+    if (!word) {
+      throw new Error('未能从屏幕截图中识别出有效的英文单词')
+    }
+    
+    emit('paste', word)
     
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : '操作失败'
-    error.value = errorMessage
     emit('error', errorMessage)
-    
-    // 3秒后清除错误信息
-    setTimeout(() => {
-      error.value = null
-    }, 3000)
-  } finally {
-    isLoading.value = false
   }
 }
 </script>
