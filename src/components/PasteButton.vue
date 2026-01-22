@@ -2,28 +2,34 @@
   <div class="paste-button-container">
     <button
       @click="handlePaste"
-      :disabled="!isSupported || isLoading"
+      :disabled="!isSupported || isLoading || isRecognizing"
       class="paste-button"
       :class="{
-        'paste-button--loading': isLoading,
+        'paste-button--loading': isLoading || isRecognizing,
         'paste-button--disabled': !isSupported
       }"
       type="button"
+      title="支持粘贴文本或图片进行识别"
     >
-      <span class="paste-button__icon" v-if="!isLoading">
+      <span class="paste-button__icon" v-if="!isLoading && !isRecognizing">
         📋
       </span>
-      <span class="paste-button__loading" v-if="isLoading">
-        ⏳
+      <span class="paste-button__loading" v-if="isLoading || isRecognizing">
+        {{ isRecognizing ? '🔍' : '⏳' }}
       </span>
       <span class="paste-button__text">
         {{ buttonText }}
       </span>
     </button>
     
-    <!-- 错误提示 */
-    <div v-if="error" class="paste-error">
-      {{ error }}
+    <!-- 进度提示 -->
+    <div v-if="isRecognizing && progress > 0" class="ocr-progress">
+      识别中: {{ Math.round(progress * 100) }}%
+    </div>
+    
+    <!-- 错误提示 -->
+    <div v-if="error || ocrError" class="paste-error">
+      {{ error || ocrError }}
     </div>
     
     <!-- 不支持提示 -->
@@ -36,17 +42,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useClipboard } from '../composables/useClipboard'
+import { useOCR } from '../composables/useOCR'
 
 // Emits
 interface Emits {
-  'paste': [text: string]
-  'error': [error: string]
+  (e: 'paste', text: string): void
+  (e: 'error', error: string): void
 }
 
 const emit = defineEmits<Emits>()
 
-// 使用剪贴板composable
-const { isSupported, pasteFromClipboard } = useClipboard()
+// 使用 composables
+const { isSupported, readClipboardItems } = useClipboard()
+const { recognizeImage, extractWord, isRecognizing, error: ocrError, progress } = useOCR()
 
 // 本地状态
 const isLoading = ref(false)
@@ -54,14 +62,15 @@ const error = ref<string | null>(null)
 
 // 计算属性
 const buttonText = computed(() => {
+  if (isRecognizing.value) return '识别中...'
   if (isLoading.value) return '粘贴中...'
   if (!isSupported.value) return '不支持粘贴'
-  return '粘贴查询'
+  return '粘贴/OCR识别'
 })
 
 // 处理粘贴事件
 const handlePaste = async () => {
-  if (!isSupported.value || isLoading.value) {
+  if (!isSupported.value || isLoading.value || isRecognizing.value) {
     return
   }
 
@@ -69,21 +78,36 @@ const handlePaste = async () => {
     isLoading.value = true
     error.value = null
     
-    const text = await pasteFromClipboard()
+    const result = await readClipboardItems()
     
-    if (!text) {
-      throw new Error('剪贴板内容为空')
+    if (result.type === 'text' && typeof result.data === 'string') {
+      const text = result.data
+      if (!text) throw new Error('剪贴板内容为空')
+      
+      const cleanText = text.trim()
+      // 简单验证是否包含字母
+      if (!/[a-zA-Z]/.test(cleanText)) {
+        throw new Error('请粘贴包含英文单词的内容')
+      }
+      emit('paste', cleanText)
+      
+    } else if (result.type === 'image' && result.data instanceof Blob) {
+      // 图片处理
+      isLoading.value = false // 切换到 OCR 状态
+      const text = await recognizeImage(result.data)
+      const word = extractWord(text)
+      
+      if (!word) {
+        throw new Error('未能从图片中识别出有效的英文单词')
+      }
+      emit('paste', word)
+      
+    } else {
+      throw new Error('剪贴板中没有文本或图片')
     }
     
-    // 简单验证是否为英文单词（只包含字母）
-    const cleanText = text.trim()
-    if (!/^[a-zA-Z]+$/.test(cleanText)) {
-      throw new Error('请粘贴有效的英文单词')
-    }
-    
-    emit('paste', cleanText)
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : '粘贴失败'
+    const errorMessage = err instanceof Error ? err.message : '操作失败'
     error.value = errorMessage
     emit('error', errorMessage)
     
@@ -95,14 +119,17 @@ const handlePaste = async () => {
     isLoading.value = false
   }
 }
-
-
-
-// 暴露方法给父组件
-defineExpose({
-  handlePaste
-})
 </script>
+
+<style scoped>
+/* 可以在这里添加一些样式，或者复用全局样式 */
+.ocr-progress {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
+  text-align: center;
+}
+</style>
 
 <style scoped>
 .paste-button-container {

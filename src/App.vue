@@ -38,6 +38,13 @@
           <p class="loading-text">正在加载单词数据...</p>
         </section>
 
+        <!-- OCR 识别状态遮罩 -->
+        <div v-if="isGlobalRecognizing" class="ocr-overlay">
+          <div class="ocr-spinner"></div>
+          <p class="ocr-text">正在识别截图中的单词...</p>
+          <p class="ocr-progress" v-if="ocrProgress > 0">{{ Math.round(ocrProgress * 100) }}%</p>
+        </div>
+
         <!-- 错误状态 -->
         <section v-if="error" class="error-section">
           <div class="error-card">
@@ -75,11 +82,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import SearchBox from './components/SearchBox.vue'
 import PasteButton from './components/PasteButton.vue'
 import ResultDisplay from './components/ResultDisplay.vue'
 import { useWordSearch } from './composables/useWordSearch'
+import { useOCR } from './composables/useOCR'
 
 // 使用单词搜索功能
 const {
@@ -92,6 +100,14 @@ const {
   clearSearch,
   loadWordsData
 } = useWordSearch()
+
+// 使用 OCR 功能 (用于全局粘贴)
+const { 
+  recognizeImage, 
+  extractWord, 
+  isRecognizing: isGlobalRecognizing, 
+  progress: ocrProgress 
+} = useOCR()
 
 // 组件引用
 const searchBoxRef = ref<InstanceType<typeof SearchBox>>()
@@ -119,6 +135,68 @@ const handlePasteError = (errorMessage: string) => {
   // 可以在这里添加用户提示
 }
 
+// 全局粘贴事件处理
+const handleGlobalPaste = async (event: ClipboardEvent) => {
+  // 如果正在识别或加载，忽略
+  if (isGlobalRecognizing.value || isLoading.value) return;
+
+  const target = event.target as HTMLElement;
+  const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+  
+  // 获取剪贴板数据
+  const items = event.clipboardData?.items;
+  if (!items) return;
+
+  // 检查是否有图片
+  let hasImage = false;
+  let imageBlob: Blob | null = null;
+  
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) {
+      hasImage = true;
+      imageBlob = items[i].getAsFile();
+      break;
+    }
+  }
+
+  // 如果有图片，优先处理图片（即使用户在输入框中粘贴）
+  // 或者如果用户在非输入框粘贴文本
+  if (hasImage && imageBlob) {
+    event.preventDefault(); // 阻止默认行为
+    try {
+      const text = await recognizeImage(imageBlob);
+      const word = extractWord(text);
+      if (word) {
+        handlePaste(word);
+      } else {
+        console.warn('未识别到有效单词');
+      }
+    } catch (e) {
+      console.error('OCR Error:', e);
+      handlePasteError('图片识别失败');
+    }
+  } else if (!isInput) {
+    // 非输入框的文本粘贴
+    const text = event.clipboardData?.getData('text');
+    if (text && text.trim()) {
+       event.preventDefault();
+       // 简单验证
+       const cleanText = text.trim();
+       if (/[a-zA-Z]/.test(cleanText)) {
+         handlePaste(cleanText);
+       }
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('paste', handleGlobalPaste);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('paste', handleGlobalPaste);
+});
+
 // 重新加载数据
 const retryLoad = () => {
   loadWordsData()
@@ -132,12 +210,54 @@ watch(searchQuery, (newQuery) => {
 </script>
 
 <style scoped>
+/* OCR Overlay 样式 */
+.ocr-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  color: white;
+}
+
+.ocr-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 16px;
+}
+
+.ocr-text {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.ocr-progress {
+  margin-top: 8px;
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
+
 
 .container {
   max-width: 1200px;

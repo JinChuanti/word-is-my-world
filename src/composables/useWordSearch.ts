@@ -1,9 +1,9 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, shallowRef } from 'vue'
 import type { WordData, SearchResult } from '../types/word'
 
 export function useWordSearch() {
-  // 响应式数据
-  const wordsData = ref<WordData[]>([])
+  // 响应式数据 - 使用 shallowRef 优化大数据量性能，避免深度响应式转换
+  const wordsData = shallowRef<WordData[]>([])
   const searchQuery = ref('')
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -20,7 +20,8 @@ export function useWordSearch() {
       }
       
       const data = await response.json()
-      wordsData.value = data
+      // 冻结数据对象，进一步提升性能并防止意外修改
+      wordsData.value = Object.freeze(data)
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载数据失败'
       console.error('Failed to load words data:', err)
