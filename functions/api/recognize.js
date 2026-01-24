@@ -1,9 +1,7 @@
-import crypto from 'node:crypto';
-
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // CORS Headers (虽然同源部署不需要，但在调试或跨域调用时有用)
+  // CORS Headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -14,7 +12,6 @@ export async function onRequestPost(context) {
     const body = await request.json();
     const { audioData, len } = body;
 
-    // 环境变量 (需要在 EdgeOne Pages 控制台配置)
     const SECRET_ID = env.TENCENT_SECRET_ID;
     const SECRET_KEY = env.TENCENT_SECRET_KEY;
     
@@ -22,7 +19,6 @@ export async function onRequestPost(context) {
       throw new Error('Missing SecretId or SecretKey in environment variables');
     }
 
-    // 腾讯云 API 配置
     const endpoint = "asr.tencentcloudapi.com";
     const service = "asr";
     const region = "ap-shanghai";
@@ -31,7 +27,6 @@ export async function onRequestPost(context) {
     const timestamp = Math.floor(Date.now() / 1000);
     const date = new Date(timestamp * 1000).toISOString().substr(0, 10);
 
-    // 构造请求包体
     const payload = JSON.stringify({
       EngSerViceType: "16k_en",
       SourceType: 1,
@@ -43,12 +38,31 @@ export async function onRequestPost(context) {
       UsrAudioKey: Math.random().toString(36).substr(2)
     });
 
-    // ************* V3 签名逻辑 Start *************
+    // Helper functions for Web Crypto API (Standard Edge Runtime Compatible)
+    async function sha256Hex(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function hmac(key, message) {
+      const encoder = new TextEncoder();
+      const keyData = (typeof key === 'string') ? encoder.encode(key) : key;
+      const algorithm = { name: 'HMAC', hash: 'SHA-256' };
+      const importedKey = await crypto.subtle.importKey('raw', keyData, algorithm, false, ['sign']);
+      return await crypto.subtle.sign(algorithm, importedKey, encoder.encode(message));
+    }
+
+    function bufferToHex(buffer) {
+      return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // ************* V3 Signature Logic (Web Crypto) *************
     const canonicalUri = "/";
     const canonicalQueryString = "";
     const canonicalHeaders = "content-type:application/json; charset=utf-8\nhost:" + endpoint + "\n";
     const signedHeaders = "content-type;host";
-    const hashedRequestPayload = crypto.createHash('sha256').update(payload).digest('hex');
+    const hashedRequestPayload = await sha256Hex(payload);
     const canonicalRequest = "POST" + "\n" +
       canonicalUri + "\n" +
       canonicalQueryString + "\n" +
@@ -58,24 +72,24 @@ export async function onRequestPost(context) {
 
     const algorithm = "TC3-HMAC-SHA256";
     const credentialScope = date + "/" + service + "/" + "tc3_request";
-    const hashedCanonicalRequest = crypto.createHash('sha256').update(canonicalRequest).digest('hex');
+    const hashedCanonicalRequest = await sha256Hex(canonicalRequest);
     const stringToSign = algorithm + "\n" +
       timestamp + "\n" +
       credentialScope + "\n" +
       hashedCanonicalRequest;
 
-    const kDate = crypto.createHmac('sha256', "TC3" + SECRET_KEY).update(date).digest();
-    const kService = crypto.createHmac('sha256', kDate).update(service).digest();
-    const kSigning = crypto.createHmac('sha256', kService).update("tc3_request").digest();
-    const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+    const kDate = await hmac("TC3" + SECRET_KEY, date);
+    const kService = await hmac(kDate, service);
+    const kSigning = await hmac(kService, "tc3_request");
+    const signatureBuffer = await hmac(kSigning, stringToSign);
+    const signature = bufferToHex(signatureBuffer);
 
     const authorization = algorithm + " " +
       "Credential=" + SECRET_ID + "/" + credentialScope + ", " +
       "SignedHeaders=" + signedHeaders + ", " +
       "Signature=" + signature;
-    // ************* V3 签名逻辑 End *************
+    // ************* End V3 Signature *************
 
-    // 发起请求 (使用 fetch)
     const response = await fetch(`https://${endpoint}`, {
       method: 'POST',
       headers: {
@@ -96,7 +110,7 @@ export async function onRequestPost(context) {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
