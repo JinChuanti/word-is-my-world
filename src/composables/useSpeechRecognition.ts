@@ -45,8 +45,10 @@ export function useSpeechRecognition() {
       
       const { base64, len } = await recorder.stop()
       
-      // 调用 Vercel API 代理百度 ASR
-      const response = await fetch('/api/recognize', {
+      // 调用 API (优先使用环境变量中的 API 地址，否则回退到相对路径)
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/recognize';
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
