@@ -46,12 +46,17 @@ export function useSpeechRecognition() {
       const { base64, len } = await recorder.stop()
       
       // 调用 API
-      // 生产环境默认使用 Vercel 线上地址，以支持部署到非 Vercel 平台（如腾讯云）时的跨域调用
-      // 本地开发环境使用 /api/recognize 通过 Vite 代理转发
-      const defaultUrl = import.meta.env.DEV ? '/api/recognize' : 'https://word-is-my-world.vercel.app/api/recognize';
-      const apiUrl = import.meta.env.VITE_API_URL || defaultUrl;
-      
-      const response = await fetch(apiUrl, {
+       // 优先使用环境变量 VITE_API_URL
+       // 如果未配置 VITE_API_URL 且在生产环境，则尝试回退到 Vercel (但在非 Vercel 环境下会超时)
+       // 强烈建议在非 Vercel 部署时配置 VITE_API_URL
+       const defaultUrl = import.meta.env.DEV ? '/api/recognize' : 'https://word-is-my-world.vercel.app/api/recognize';
+       const apiUrl = import.meta.env.VITE_API_URL || defaultUrl;
+       
+       if (!import.meta.env.VITE_API_URL && !import.meta.env.DEV) {
+         console.warn('⚠️ 未检测到 VITE_API_URL 环境变量。正在尝试连接 Vercel 后端。如果您的前端部署在腾讯云或其他平台，这可能会导致连接超时。请配置 VITE_API_URL 指向您的腾讯云 SCF 地址。');
+       }
+       
+       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
