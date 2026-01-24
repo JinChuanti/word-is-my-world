@@ -1,9 +1,0 @@
-{
-  "name": "tencent-asr-scf",
-  "version": "1.0.0",
-  "description": "Tencent Cloud SCF for ASR Proxy",
-  "main": "tencent_scf.js",
-  "dependencies": {
-    "tencentcloud-sdk-nodejs": "^4.0.0"
-  }
-}
