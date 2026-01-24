@@ -45,8 +45,11 @@ export function useSpeechRecognition() {
       
       const { base64, len } = await recorder.stop()
       
-      // 调用 API (优先使用环境变量中的 API 地址，否则回退到相对路径)
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/recognize';
+      // 调用 API
+      // 生产环境默认使用 Vercel 线上地址，以支持部署到非 Vercel 平台（如腾讯云）时的跨域调用
+      // 本地开发环境使用 /api/recognize 通过 Vite 代理转发
+      const defaultUrl = import.meta.env.DEV ? '/api/recognize' : 'https://word-is-my-world.vercel.app/api/recognize';
+      const apiUrl = import.meta.env.VITE_API_URL || defaultUrl;
       
       const response = await fetch(apiUrl, {
         method: 'POST',
