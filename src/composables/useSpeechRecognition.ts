@@ -62,12 +62,26 @@ export function useSpeechRecognition() {
       })
 
       const data = await response.json()
-      
-      if (response.ok && data.result) {
-        // 百度返回的是数组，取第一个结果
-        result.value = data.result[0]
+      console.log('API Response:', data); // Debug log
+
+      if (response.ok) {
+        // 适配腾讯云返回格式 { Response: { Result: "..." } }
+        if (data.Response && data.Response.Result) {
+          result.value = data.Response.Result;
+        } 
+        // 适配百度/旧格式 { result: ["..."] }
+        else if (data.result && data.result.length > 0) {
+          result.value = data.result[0];
+        }
+        // 腾讯云错误 { Response: { Error: { Message: "..." } } }
+        else if (data.Response && data.Response.Error) {
+           throw new Error(data.Response.Error.Message);
+        }
+        else {
+           throw new Error(data.error || '识别结果为空');
+        }
       } else {
-        throw new Error(data.error || '识别失败')
+        throw new Error(data.error || '请求失败');
       }
       
     } catch (e) {
