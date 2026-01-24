@@ -1,202 +1,25 @@
-<template>
-  <div class="app">
-    <!-- 头部 -->
-    <header class="app-header">
-      <div class="container">
-        <h1 class="app-title">
-          <span class="title-icon">📚</span>
-          考研单词趣记法查询工具
-        </h1>
-        <p class="app-subtitle">让记单词变得更有趣 · 覆盖26考研红宝书所有单词</p>
-      </div>
-    </header>
-
-    <!-- 主要内容 -->
-    <main class="app-main">
-      <div class="container">
-        <!-- 搜索区域 -->
-        <section class="search-section">
-          <SearchBox
-            v-model="searchQuery"
-            :words-data="wordsData"
-            @search="handleSearch"
-            @clear="handleClear"
-            ref="searchBoxRef"
-          />
-          
-          <div class="paste-section">
-            <PasteButton
-              @paste="handlePaste"
-              @error="handlePasteError"
-            />
-          </div>
-        </section>
-
-        <!-- 加载状态 -->
-        <section v-if="isLoading" class="loading-section">
-          <div class="loading-spinner"></div>
-          <p class="loading-text">正在加载单词数据...</p>
-        </section>
-
-        <!-- OCR 识别状态遮罩 -->
-        <div v-if="isGlobalRecognizing" class="ocr-overlay">
-          <div class="ocr-spinner"></div>
-          <p class="ocr-text">正在识别截图中的单词...</p>
-          <p class="ocr-progress" v-if="ocrProgress > 0">{{ Math.round(ocrProgress * 100) }}%</p>
-        </div>
-
-        <!-- 错误状态 -->
-        <section v-if="error" class="error-section">
-          <div class="error-card">
-            <div class="error-icon">⚠️</div>
-            <h3 class="error-title">加载失败</h3>
-            <p class="error-message">{{ error }}</p>
-            <button @click="retryLoad" class="retry-button">
-              重新加载
-            </button>
-          </div>
-        </section>
-
-        <!-- 结果展示区域 -->
-        <section v-if="!isLoading && !error" class="result-section">
-          <ResultDisplay
-            :search-result="currentSearchResult"
-            :search-query="searchQuery"
-          />
-        </section>
-      </div>
-    </main>
-
-    <!-- 页脚 -->
-    <footer class="app-footer">
-      <div class="container">
-        <p class="footer-text">
-          © 2025 考研单词趣记法查询工具 | 让学习更高效
-        </p>
-        <p class="footer-author">
-          23计算机1金传体 作品
-        </p>
-      </div>
-    </footer>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { watch } from 'vue'
 import SearchBox from './components/SearchBox.vue'
-import PasteButton from './components/PasteButton.vue'
 import ResultDisplay from './components/ResultDisplay.vue'
+import VoiceButton from './components/VoiceButton.vue'
 import { useWordSearch } from './composables/useWordSearch'
-import { useOCR } from './composables/useOCR'
 
-// 使用单词搜索功能
-const {
-  wordsData,
-  searchQuery,
-  isLoading,
-  error,
-  currentSearchResult,
-  setSearchQuery,
-  clearSearch,
-  loadWordsData
+// 使用单词搜索逻辑
+const { 
+  searchQuery, 
+  currentSearchResult: searchResult, // 修正：useWordSearch 返回的是 currentSearchResult
+  loadWordsData, 
+  isLoading: isDataLoading, 
+  error: dataError 
 } = useWordSearch()
 
-// 使用 OCR 功能 (用于全局粘贴)
-const { 
-  recognizeImage, 
-  extractWord, 
-  isRecognizing: isGlobalRecognizing, 
-  progress: ocrProgress 
-} = useOCR()
-
-// 组件引用
-const searchBoxRef = ref<InstanceType<typeof SearchBox>>()
-
-// 处理搜索
-const handleSearch = (query: string) => {
-  setSearchQuery(query)
-}
-
-// 处理清空
-const handleClear = () => {
-  clearSearch()
-}
-
-// 处理粘贴
-const handlePaste = (text: string) => {
-  setSearchQuery(text)
-  // 聚焦搜索框
-  searchBoxRef.value?.focusInput()
-}
-
-// 处理粘贴错误
-const handlePasteError = (errorMessage: string) => {
-  console.error('粘贴错误:', errorMessage)
-  // 可以在这里添加用户提示
-}
-
-// 全局粘贴事件处理
-const handleGlobalPaste = async (event: ClipboardEvent) => {
-  // 如果正在识别或加载，忽略
-  if (isGlobalRecognizing.value || isLoading.value) return;
-
-  const target = event.target as HTMLElement;
-  const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
-  
-  // 获取剪贴板数据
-  const items = event.clipboardData?.items;
-  if (!items) return;
-
-  // 检查是否有图片
-  let hasImage = false;
-  let imageBlob: Blob | null = null;
-  
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.startsWith('image/')) {
-      hasImage = true;
-      imageBlob = items[i].getAsFile();
-      break;
-    }
-  }
-
-  // 如果有图片，优先处理图片（即使用户在输入框中粘贴）
-  // 或者如果用户在非输入框粘贴文本
-  if (hasImage && imageBlob) {
-    event.preventDefault(); // 阻止默认行为
-    try {
-      const text = await recognizeImage(imageBlob);
-      const word = extractWord(text);
-      if (word) {
-        handlePaste(word);
-      } else {
-        console.warn('未识别到有效单词');
-      }
-    } catch (e) {
-      console.error('OCR Error:', e);
-      handlePasteError('图片识别失败');
-    }
-  } else if (!isInput) {
-    // 移除文本粘贴功能，仅保留图片 OCR 识别
-    /* 
-    const text = event.clipboardData?.getData('text');
-    if (text && text.trim()) {
-       event.preventDefault();
-       const cleanText = text.trim();
-       if (/[a-zA-Z]/.test(cleanText)) {
-         handlePaste(cleanText);
-       }
-    }
-    */
+// 处理语音搜索
+const handleVoiceSearch = (text: string) => {
+  if (text && text.trim()) {
+    searchQuery.value = text.trim()
   }
 }
-
-onMounted(() => {
-  document.addEventListener('paste', handleGlobalPaste);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('paste', handleGlobalPaste);
-});
 
 // 重新加载数据
 const retryLoad = () => {
@@ -210,48 +33,74 @@ watch(searchQuery, (newQuery) => {
 })
 </script>
 
+<template>
+  <div class="app">
+    <!-- 背景装饰 -->
+    <div class="bg-decoration"></div>
+
+    <div class="container">
+      <!-- 头部 -->
+      <header class="app-header">
+        <h1 class="app-title">
+          <span class="title-icon">📚</span>
+          考研单词趣记法查询工具
+        </h1>
+        <p class="app-subtitle">让记单词变得更有趣 · 覆盖26考研红宝书所有单词</p>
+      </header>
+
+      <!-- 主要内容 -->
+      <main class="app-main">
+        <!-- 搜索区域 (吸顶) -->
+        <div class="search-section">
+          <SearchBox
+            v-model="searchQuery"
+            :words-data="[]"
+            @clear="searchQuery = ''"
+          />
+          
+          <div class="voice-section">
+            <VoiceButton
+              @search="handleVoiceSearch"
+              v-model="searchQuery"
+            />
+          </div>
+        </div>
+
+        <!-- 加载中 -->
+        <div v-if="isDataLoading" class="loading-section">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">正在加载单词库...</p>
+        </div>
+
+        <!-- 错误提示 -->
+        <div v-else-if="dataError" class="error-section">
+          <div class="error-card">
+            <div class="error-icon">⚠️</div>
+            <h3 class="error-title">数据加载失败</h3>
+            <p class="error-message">{{ dataError }}</p>
+            <button @click="retryLoad" class="retry-button">重试</button>
+          </div>
+        </div>
+
+        <!-- 搜索结果 -->
+        <ResultDisplay
+          v-else
+          :search-result="searchResult"
+          :search-query="searchQuery"
+        />
+      </main>
+
+      <!-- 底部 -->
+      <footer class="app-footer">
+        <p>&copy; 2025 考研单词趣记法查询工具 | 让学习更高效</p>
+        <p class="author">23计算机1金传体 作品</p>
+      </footer>
+    </div>
+  </div>
+</template>
+
 <style scoped>
-/* OCR Overlay 样式 */
-.ocr-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  color: white;
-}
-
-.ocr-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
-  margin-bottom: 16px;
-}
-
-.ocr-text {
-  font-size: 1.2rem;
-  font-weight: 500;
-}
-
-.ocr-progress {
-  margin-top: 8px;
-  font-size: 1rem;
-  opacity: 0.8;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+/* 移除 OCR Overlay 样式 */
 .app {
   min-height: 100vh;
   display: flex;
@@ -318,6 +167,12 @@ watch(searchQuery, (newQuery) => {
 }
 
 .paste-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.voice-section {
   display: flex;
   justify-content: center;
   margin-top: 15px;

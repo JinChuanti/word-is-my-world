@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "marked": "^16.3.0",
+    "tencentcloud-sdk-nodejs": "^4.1.175",
     "tesseract.js": "^7.0.0",
     "vue": "^3.5.18"
   },
