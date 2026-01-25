@@ -65,13 +65,14 @@ export function useSpeechRecognition() {
       console.log('API Response:', data); // Debug log
 
       if (response.ok) {
+        let text = '';
         // 适配腾讯云返回格式 { Response: { Result: "..." } }
         if (data.Response && data.Response.Result) {
-          result.value = data.Response.Result;
+          text = data.Response.Result;
         } 
         // 适配百度/旧格式 { result: ["..."] }
         else if (data.result && data.result.length > 0) {
-          result.value = data.result[0];
+          text = data.result[0];
         }
         // 腾讯云错误 { Response: { Error: { Message: "..." } } }
         else if (data.Response && data.Response.Error) {
@@ -80,6 +81,10 @@ export function useSpeechRecognition() {
         else {
            throw new Error(data.error || '识别结果为空');
         }
+
+        // 移除末尾标点符号 (.,!?)
+        result.value = text.replace(/[.,!?。，！？]+$/, '').trim();
+        
       } else {
         throw new Error(data.error || '请求失败');
       }

@@ -87,6 +87,7 @@ watch(searchQuery, (newQuery) => {
           v-else
           :search-result="searchResult"
           :search-query="searchQuery"
+          @search="searchQuery = $event"
         />
       </main>
 

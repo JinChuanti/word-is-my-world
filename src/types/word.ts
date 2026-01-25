@@ -12,4 +12,5 @@ export interface WordData {
 export interface SearchResult {
   found: boolean;
   data?: WordData;
+  suggestions?: WordData[]; // 近似搜索建议
 }

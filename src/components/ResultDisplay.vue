@@ -50,7 +50,23 @@
       <p class="no-result-text">
         抱歉，没有找到单词 "<strong>{{ searchQuery }}</strong>" 的记忆法。
       </p>
-      <p class="no-result-suggestion">
+
+      <!-- 近似搜索建议 -->
+      <div v-if="searchResult.suggestions && searchResult.suggestions.length > 0" class="suggestions-container">
+        <p class="suggestions-title">您是不是在找：</p>
+        <div class="suggestions-list">
+          <button 
+            v-for="word in searchResult.suggestions" 
+            :key="word.word" 
+            class="suggestion-item"
+            @click="$emit('search', word.word)"
+          >
+            {{ word.word }}
+          </button>
+        </div>
+      </div>
+      
+      <p class="no-result-suggestion" v-else>
         请检查拼写是否正确，或尝试搜索其他单词。
       </p>
     </div>
@@ -79,6 +95,10 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  (e: 'search', word: string): void
+}>()
 
 // 使用剪贴板功能
 const { copyToClipboard } = useClipboard()
@@ -387,5 +407,45 @@ const copyWord = async () => {
   .empty-state-title {
     font-size: 20px;
   }
+}
+
+.suggestions-container {
+  margin-top: 24px;
+  text-align: left;
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px dashed #d1d5db;
+}
+
+.suggestions-title {
+  font-size: 14px;
+  color: #4b5563;
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-item {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.suggestion-item:hover {
+  background: #dbeafe;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
 }
 </style>

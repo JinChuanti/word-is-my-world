@@ -30,6 +30,37 @@ export function useWordSearch() {
     }
   }
 
+  // Levenshtein distance for fuzzy matching
+  const levenshteinDistance = (a: string, b: string): number => {
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            Math.min(
+              matrix[i][j - 1] + 1, // insertion
+              matrix[i - 1][j] + 1 // deletion
+            )
+          );
+        }
+      }
+    }
+
+    return matrix[b.length][a.length];
+  };
+
   // 搜索单词
   const searchWord = (query: string): SearchResult => {
     if (!query.trim()) {
@@ -41,9 +72,26 @@ export function useWordSearch() {
       word => word.word.toLowerCase() === normalizedQuery
     )
 
-    return foundWord 
-      ? { found: true, data: foundWord }
-      : { found: false }
+    if (foundWord) {
+      return { found: true, data: foundWord }
+    }
+
+    // Fuzzy search logic: Find suggestions
+    const suggestions = wordsData.value
+      .map(word => ({
+        word,
+        distance: levenshteinDistance(normalizedQuery, word.word.toLowerCase())
+      }))
+      .filter(item => {
+        // 允许的编辑距离：单词越长，容错率越高
+        const maxDistance = Math.max(2, Math.floor(normalizedQuery.length / 3));
+        return item.distance <= maxDistance;
+      }) 
+      .sort((a, b) => a.distance - b.distance) // Sort by distance
+      .slice(0, 5) // Take top 5
+      .map(item => item.word);
+
+    return { found: false, suggestions }
   }
 
   // 计算属性：当前搜索结果
