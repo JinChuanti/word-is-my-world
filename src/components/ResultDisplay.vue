@@ -96,7 +96,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'search', word: string): void
 }>()
 
