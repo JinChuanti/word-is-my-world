@@ -54,7 +54,7 @@ watch(searchQuery, (newQuery) => {
         <div class="search-section">
           <SearchBox
             v-model="searchQuery"
-            :words-data="[]"
+            :words-data="wordsData"
             @clear="searchQuery = ''"
           />
           
