@@ -8,6 +8,7 @@ import { useWordSearch } from './composables/useWordSearch'
 // 使用单词搜索逻辑
 const { 
   searchQuery, 
+  wordsData,
   currentSearchResult: searchResult, // 修正：useWordSearch 返回的是 currentSearchResult
   loadWordsData, 
   isLoading: isDataLoading, 
